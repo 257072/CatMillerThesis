@@ -1,58 +1,22 @@
+
 <html>
   <head>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   </head>
   <body>
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
-             embedded
-             vr-mode-ui="enabled: false"
-             device-orientation-permission-ui="enabled: true">
-             
+    <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-assets>
-        <audio id="audio0" src="audio1.mp3"></audio>
-        <audio id="audio1" src="audio2.mp3"></audio>
+        <img id="card" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" />
+        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"></a-asset-item>
       </a-assets>
 
-      <!-- Image Target 0 -->
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane width="1" height="1" color="#FFF" opacity="0.0"></a-plane>
-      </a-entity>
-
-      <!-- Image Target 1 -->
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane width="1" height="1" color="#FFF" opacity="0.0"></a-plane>
+        <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
+        <a-gltf-model rotation="0 0 0 " position="0 0 0.1" scale="0.005 0.005 0.005" src="#avatarModel" animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
       </a-entity>
     </a-scene>
-
-    <script>
-      const sceneEl = document.querySelector('a-scene');
-      const audios = {
-        0: document.querySelector('#audio0'),
-        1: document.querySelector('#audio1')
-      };
-
-      let currentAudio = null;
-
-      sceneEl.addEventListener("targetFound", (e) => {
-        const targetIndex = e.detail.index;
-        if (audios[targetIndex]) {
-          if (currentAudio && currentAudio !== audios[targetIndex]) {
-            currentAudio.pause();
-            currentAudio.currentTime = 0;
-          }
-          currentAudio = audios[targetIndex];
-          currentAudio.play();
-        }
-      });
-
-      sceneEl.addEventListener("targetLost", (e) => {
-        const targetIndex = e.detail.index;
-        if (audios[targetIndex]) {
-          audios[targetIndex].pause();
-          audios[targetIndex].currentTime = 0;
-        }
-      });
-    </script>
   </body>
 </html>
