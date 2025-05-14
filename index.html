@@ -1,0 +1,58 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
+  </head>
+  <body>
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+             embedded
+             vr-mode-ui="enabled: false"
+             device-orientation-permission-ui="enabled: true">
+             
+      <a-assets>
+        <audio id="audio0" src="audio1.mp3"></audio>
+        <audio id="audio1" src="audio2.mp3"></audio>
+      </a-assets>
+
+      <!-- Image Target 0 -->
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane width="1" height="1" color="#FFF" opacity="0.0"></a-plane>
+      </a-entity>
+      
+      <!-- Image Target 1 -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane width="1" height="1" color="#FFF" opacity="0.0"></a-plane>
+      </a-entity>
+    </a-scene>
+
+    <script>
+      const sceneEl = document.querySelector('a-scene');
+      const audios = {
+        0: document.querySelector('#audio0'),
+        1: document.querySelector('#audio1')
+      };
+
+      let currentAudio = null;
+
+      sceneEl.addEventListener("targetFound", (e) => {
+        const targetIndex = e.detail.index;
+        if (audios[targetIndex]) {
+          if (currentAudio && currentAudio !== audios[targetIndex]) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+          }
+          currentAudio = audios[targetIndex];
+          currentAudio.play();
+        }
+      });
+
+      sceneEl.addEventListener("targetLost", (e) => {
+        const targetIndex = e.detail.index;
+        if (audios[targetIndex]) {
+          audios[targetIndex].pause();
+          audios[targetIndex].currentTime = 0;
+        }
+      });
+    </script>
+  </body>
+</html>
