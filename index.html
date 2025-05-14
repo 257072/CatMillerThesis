@@ -27,7 +27,17 @@
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
+        <!-- Load all 10 audio files -->
+        <audio id="audio-0" src="audio/audio0.mp3" preload="auto"></audio>
         <audio id="audio-1" src="audio/audio1.mp3" preload="auto"></audio>
+        <audio id="audio-2" src="audio/audio2.mp3" preload="auto"></audio>
+        <audio id="audio-3" src="audio/audio3.mp3" preload="auto"></audio>
+        <audio id="audio-4" src="audio/audio4.mp3" preload="auto"></audio>
+        <audio id="audio-5" src="audio/audio5.mp3" preload="auto"></audio>
+        <audio id="audio-6" src="audio/audio6.mp3" preload="auto"></audio>
+        <audio id="audio-7" src="audio/audio7.mp3" preload="auto"></audio>
+        <audio id="audio-8" src="audio/audio8.mp3" preload="auto"></audio>
+        <audio id="audio-9" src="audio/audio9.mp3" preload="auto"></audio>
       </a-assets>
 
       <a-camera
@@ -37,54 +47,80 @@
         raycaster="near: 10; far: 10000;"
       ></a-camera>
 
-      <a-entity id="example-target" mindar-image-target="targetIndex: 0"></a-entity>
+      <!-- Create 10 targets -->
+      <a-entity id="target-0" mindar-image-target="targetIndex: 0"></a-entity>
+      <a-entity id="target-1" mindar-image-target="targetIndex: 1"></a-entity>
+      <a-entity id="target-2" mindar-image-target="targetIndex: 2"></a-entity>
+      <a-entity id="target-3" mindar-image-target="targetIndex: 3"></a-entity>
+      <a-entity id="target-4" mindar-image-target="targetIndex: 4"></a-entity>
+      <a-entity id="target-5" mindar-image-target="targetIndex: 5"></a-entity>
+      <a-entity id="target-6" mindar-image-target="targetIndex: 6"></a-entity>
+      <a-entity id="target-7" mindar-image-target="targetIndex: 7"></a-entity>
+      <a-entity id="target-8" mindar-image-target="targetIndex: 8"></a-entity>
+      <a-entity id="target-9" mindar-image-target="targetIndex: 9"></a-entity>
     </a-scene>
 
     <script>
-      const startButton = document.getElementById("start-button");
-      const sceneEl = document.querySelector("a-scene");
-      const audio1 = document.querySelector("#audio-1");
-
-      // Ensure AudioContext resumes (for iOS/Safari)
-      const resumeAudioContext = () => {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          const context = new AudioContext();
-          if (context.state === 'suspended') {
-            context.resume().then(() => {
-              console.log("AudioContext resumed");
+        const startButton = document.getElementById("start-button");
+        const sceneEl = document.querySelector("a-scene");
+      
+        // Get all audio elements in an array
+        const allAudios = Array.from({ length: 10 }, (_, i) =>
+          document.querySelector(`#audio-${i}`)
+        );
+      
+        const stopAllAudio = () => {
+          allAudios.forEach((audio) => {
+            audio.pause();
+            audio.currentTime = 0;
+          });
+        };
+      
+        // Ensure AudioContext resumes (for iOS/Safari)
+        const resumeAudioContext = () => {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            const context = new AudioContext();
+            if (context.state === "suspended") {
+              context.resume().then(() => {
+                console.log("AudioContext resumed");
+              });
+            }
+          }
+        };
+      
+        startButton.addEventListener("click", () => {
+          startButton.style.display = "none";
+          sceneEl.style.display = "block";
+          resumeAudioContext();
+      
+          let arSystem;
+          sceneEl.addEventListener("loaded", () => {
+            arSystem = sceneEl.systems["mindar-image-system"];
+            arSystem.start();
+          });
+      
+          // Attach event listeners to each target/audio pair
+          for (let i = 0; i < 10; i++) {
+            const target = document.querySelector(`#target-${i}`);
+            const audio = document.querySelector(`#audio-${i}`);
+      
+            target.addEventListener("targetFound", () => {
+              console.log(`Target ${i} found`);
+              stopAllAudio();
+              audio.currentTime = 0;
+              audio.play().catch((e) =>
+                console.warn(`Audio ${i} play failed:`, e)
+              );
+            });
+      
+            target.addEventListener("targetLost", () => {
+              console.log(`Target ${i} lost`);
+              audio.pause();
+              audio.currentTime = 0;
             });
           }
-        }
-      };
-
-      startButton.addEventListener("click", () => {
-        startButton.style.display = "none";
-        sceneEl.style.display = "block";
-        resumeAudioContext();
-
-        let arSystem;
-        sceneEl.addEventListener("loaded", () => {
-          arSystem = sceneEl.systems["mindar-image-system"];
-          arSystem.start();
         });
-
-        const exampleTarget = document.querySelector("#example-target");
-
-        exampleTarget.addEventListener("targetFound", () => {
-          console.log("target found");
-          audio1.currentTime = 0;
-          audio1.play().catch((e) => {
-            console.warn("Audio play failed:", e);
-          });
-        });
-
-        exampleTarget.addEventListener("targetLost", () => {
-          console.log("target lost");
-          audio1.pause();
-          audio1.currentTime = 0;
-        });
-      });
-    </script>
+      </script>      
   </body>
 </html>
