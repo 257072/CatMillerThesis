@@ -4,38 +4,48 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function() {
-        const sceneEl = document.querySelector('a-scene');
-        sceneEl.addEventListener('loaded', function () {
-          const arSystem = sceneEl.systems["mindar-image-system"];
-          arSystem.start(); // Automatically start AR when scene is loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        const sceneEl = document.querySelector("a-scene");
+        let arSystem;
+
+        const audio = new Audio("audio.mp3"); // Replace with your audio file path
+
+        sceneEl.addEventListener("loaded", function () {
+          arSystem = sceneEl.systems["mindar-image-system"];
+          arSystem.start();
         });
 
-        const exampleTarget = document.querySelector('#example-target');
-        const examplePlane = document.querySelector('#example-plane');
+        const exampleTarget = document.querySelector("#example-target");
 
-        // Log events
-        exampleTarget.addEventListener("targetFound", event => {
+        exampleTarget.addEventListener("targetFound", () => {
           console.log("target found");
+          audio.play().catch(err => console.warn("Audio play failed:", err));
         });
 
-        exampleTarget.addEventListener("targetLost", event => {
+        exampleTarget.addEventListener("targetLost", () => {
           console.log("target lost");
-        });
-
-        examplePlane.addEventListener("click", event => {
-          console.log("plane click");
+          audio.pause();
+          audio.currentTime = 0; // Optional: reset playback position
         });
       });
     </script>
   </head>
   <body>
-    <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; autoStart: false;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="near: 10; far: 10000; objects: .clickable"></a-camera>
+    <a-scene
+      mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; autoStart: false;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera
+        position="0 0 0"
+        look-controls="enabled: false"
+        cursor="fuse: false; rayOrigin: mouse;"
+        raycaster="near: 10; far: 10000;"
+      ></a-camera>
 
-      <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-        <a-plane id="example-plane" class="clickable" color="blue" opacity="0.5" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
-      </a-entity>
+      <a-entity id="example-target" mindar-image-target="targetIndex: 0"></a-entity>
     </a-scene>
   </body>
 </html>
