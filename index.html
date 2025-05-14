@@ -14,36 +14,13 @@
         });
 
         const exampleTarget = document.querySelector('#example-target');
-        const examplePlane = document.querySelector('#example-plane');
-        const startButton = document.querySelector("#example-start-button");
-        const stopButton = document.querySelector("#example-stop-button");
-        const pauseButton = document.querySelector("#example-pause-button");
-        const pauseKeepVideoButton = document.querySelector("#example-pause-keep-video-button");
-        const unpauseButton = document.querySelector("#example-unpause-button");
-
-        startButton.addEventListener('click', () => {
-          console.log("start");
-          arSystem.start();
-        });
-        stopButton.addEventListener('click', () => {
-          arSystem.stop();
-        });
-        pauseButton.addEventListener('click', () => {
-          arSystem.pause();
-        });
-        pauseKeepVideoButton.addEventListener('click', () => {
-          arSystem.pause(true);
-        });
-        unpauseButton.addEventListener('click', () => {
-          arSystem.unpause();
-        });
 
         sceneEl.addEventListener("arReady", (event) => {
-          // console.log("MindAR is ready")
+          console.log("MindAR is ready")
         });
 
         sceneEl.addEventListener("arError", (event) => {
-          // console.log("MindAR failed to start")
+          console.log("MindAR failed to start")
         });
 
         exampleTarget.addEventListener("targetFound", event => {
@@ -57,21 +34,10 @@
           audioEl.pause();
           audioEl.currentTime = 0;
         });
-
-        examplePlane.addEventListener("click", event => {
-          console.log("plane click");
-        });
       });
     </script>
   </head>
   <body>
-    <div style="position: absolute; z-index: 1000">
-      <button id="example-start-button">Start</button>
-      <button id="example-pause-button">Pause</button>
-      <button id="example-pause-keep-video-button">Pause (keep video)</button>
-      <button id="example-unpause-button">UnPause</button>
-      <button id="example-stop-button">Stop</button>
-    </div>
 
     <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; autoStart: false;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       
