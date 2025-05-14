@@ -3,43 +3,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const sceneEl = document.querySelector("a-scene");
-        let arSystem;
-        const audio1 = document.querySelector("#audio-1"); // <--- Get the audio from a-assets
-        sceneEl.addEventListener("loaded", function () {
-          arSystem = sceneEl.systems["mindar-image-system"];
-          arSystem.start();
-        });
-
-        const exampleTarget = document.querySelector("#example-target");
-
-        exampleTarget.addEventListener("targetFound", () => {
-          console.log("target found");
-          audio1.play();
-        });
-
-        exampleTarget.addEventListener("targetLost", () => {
-          console.log("target lost");
-          audio1.pause();
-          audio1.currentTime = 0; // Optional: reset playback position
-        });
-      });
-    </script>
+    <style>
+      #start-button {
+        position: absolute;
+        z-index: 9999;
+        top: 20px;
+        left: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+    </style>
   </head>
   <body>
+    <button id="start-button">Start AR</button>
+
     <a-scene
+      id="ar-scene"
+      style="display: none;"
       mindar-image="imageTargetSrc: targets.mind; uiError:no; uiScanning:no; autoStart: false;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-    <a-assets>
-        <!-- Audio files -->
+      <a-assets>
         <audio id="audio-1" src="audio/audio1.mp3" preload="auto"></audio>
-    </a-assets>
+      </a-assets>
+
       <a-camera
         position="0 0 0"
         look-controls="enabled: false"
@@ -49,5 +39,52 @@
 
       <a-entity id="example-target" mindar-image-target="targetIndex: 0"></a-entity>
     </a-scene>
+
+    <script>
+      const startButton = document.getElementById("start-button");
+      const sceneEl = document.querySelector("a-scene");
+      const audio1 = document.querySelector("#audio-1");
+
+      // Ensure AudioContext resumes (for iOS/Safari)
+      const resumeAudioContext = () => {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const context = new AudioContext();
+          if (context.state === 'suspended') {
+            context.resume().then(() => {
+              console.log("AudioContext resumed");
+            });
+          }
+        }
+      };
+
+      startButton.addEventListener("click", () => {
+        startButton.style.display = "none";
+        sceneEl.style.display = "block";
+        resumeAudioContext();
+
+        let arSystem;
+        sceneEl.addEventListener("loaded", () => {
+          arSystem = sceneEl.systems["mindar-image-system"];
+          arSystem.start();
+        });
+
+        const exampleTarget = document.querySelector("#example-target");
+
+        exampleTarget.addEventListener("targetFound", () => {
+          console.log("target found");
+          audio1.currentTime = 0;
+          audio1.play().catch((e) => {
+            console.warn("Audio play failed:", e);
+          });
+        });
+
+        exampleTarget.addEventListener("targetLost", () => {
+          console.log("target lost");
+          audio1.pause();
+          audio1.currentTime = 0;
+        });
+      });
+    </script>
   </body>
 </html>
