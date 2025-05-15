@@ -17,7 +17,6 @@
   </head>
   <body>
     <button id="start-button">Start AR</button>
-
     <a-scene
       id="ar-scene"
       style="display: none;"
@@ -60,63 +59,68 @@
     </a-scene>
 
     <script>
-        const startButton = document.getElementById("start-button");
-        const sceneEl = document.querySelector("a-scene");
-      
-        const allAudios = Array.from({ length: 10 }, (_, i) =>
-          document.querySelector(`#audio-${i}`)
-        );
-      
-        const stopAllAudio = () => {
-          allAudios.forEach((audio) => {
-            audio.pause();
-            //audio.currentTime = 0;
-          });
-        };
-      
-        const resumeAudioContext = () => {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            const context = new AudioContext();
-            if (context.state === "suspended") {
-              context.resume().then(() => {
-                console.log("AudioContext resumed");
-              });
-            }
+      const startButton = document.getElementById("start-button");
+      const sceneEl = document.querySelector("a-scene");
+        
+      const allAudios = Array.from({ length: 10 }, (_, i) =>
+        document.querySelector(`#audio-${i}`)
+      );
+        
+      const stopAllAudio = () => {
+        allAudios.forEach((audio) => {
+          audio.pause();
+          // audio.currentTime = 0;
+        });
+      };
+    
+      const resumeAudioContext = () => {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const context = new AudioContext();
+          if (context.state === "suspended") {
+            context.resume().then(() => {
+              console.log("AudioContext resumed");
+            });
           }
-        };
+        }
+      };
+    
+      let currentPlayingIndex = null;
+    
+      startButton.addEventListener("click", () => {
+        startButton.style.display = "none";
+        sceneEl.style.display = "block";
+        resumeAudioContext();
       
-        startButton.addEventListener("click", () => {
-          startButton.style.display = "none";
-          sceneEl.style.display = "block";
-          resumeAudioContext();
+        let arSystem;
+        sceneEl.addEventListener("loaded", () => {
+          arSystem = sceneEl.systems["mindar-image-system"];
+          arSystem.start();
+        });
       
-          let arSystem;
-          sceneEl.addEventListener("loaded", () => {
-            arSystem = sceneEl.systems["mindar-image-system"];
-            arSystem.start();
-          });
-      
-          for (let i = 0; i < 10; i++) {
-            const target = document.querySelector(`#target-${i}`);
-            const audio = document.querySelector(`#audio-${i}`);
-      
-            target.addEventListener("targetFound", () => {
-              console.log(`Target ${i} found`);
+        for (let i = 0; i < 10; i++) {
+          const target = document.querySelector(`#target-${i}`);
+          const audio = document.querySelector(`#audio-${i}`);
+        
+          target.addEventListener("targetFound", () => {
+            console.log(`Target ${i} found`);
+          
+            if (currentPlayingIndex !== i) {
               stopAllAudio();
-              //audio.currentTime = 0;
+              currentPlayingIndex = i;
               audio.play().catch((e) =>
                 console.warn(`Audio ${i} play failed:`, e)
               );
-            });
-      
-            target.addEventListener("targetLost", () => {
-              console.log(`Target ${i} lost`);
-              audio.pause();
-              // audio.currentTime = 0;
-            });
-          }
-        });
-      </script>      
+            }
+          });
+        
+          // Optional: do nothing on targetLost, or just log it
+          target.addEventListener("targetLost", () => {
+            console.log(`Target ${i} lost`);
+            // Do nothing to allow audio to keep playing
+          });
+        }
+      });
+    </script>  
   </body>
 </html>
