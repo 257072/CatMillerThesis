@@ -10,10 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* This styles the "Start AR" button */
       #start-button {
         position: absolute;
-        z-index: 9999;  /* Makes sure it stays on top of everything else */
+        z-index: 9999;
         top: 20px;
         left: 20px;
         padding: 10px 20px;
@@ -29,7 +28,7 @@
     <!-- This is the AR scene (it starts off hidden) -->
     <a-scene
       id="ar-scene"
-      style="display: none;"  <!-- Hide the scene until the button is clicked -->
+      style="display: none;"
       mindar-image="imageTargetSrc: targets.mind; uiError:no; uiScanning:no; autoStart: false;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
@@ -54,9 +53,9 @@
       <!-- This camera tracks what the user sees -->
       <a-camera
         position="0 0 0"
-        look-controls="enabled: false"  <!-- No head-tracking or looking around -->
-        cursor="fuse: false; rayOrigin: mouse;"  <!-- Allow interaction with mouse -->
-        raycaster="near: 10; far: 10000;"  <!-- Detect objects within this range -->
+        look-controls="enabled: false"
+        cursor="fuse: false; rayOrigin: mouse;"  
+        raycaster="near: 10; far: 10000;"
       ></a-camera>
 
       <!-- These are the 10 image targets. Each one matches an image in the targets.mind file. -->
