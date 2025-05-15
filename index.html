@@ -69,7 +69,7 @@
         const stopAllAudio = () => {
           allAudios.forEach((audio) => {
             audio.pause();
-            audio.currentTime = 0;
+            //audio.currentTime = 0;
           });
         };
       
@@ -103,7 +103,7 @@
             target.addEventListener("targetFound", () => {
               console.log(`Target ${i} found`);
               stopAllAudio();
-              audio.currentTime = 0;
+              //audio.currentTime = 0;
               audio.play().catch((e) =>
                 console.warn(`Audio ${i} play failed:`, e)
               );
