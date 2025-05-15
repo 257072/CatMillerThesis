@@ -1,12 +1,19 @@
 <html>
   <head>
+    <!-- This tag helps the website look good on mobile devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Load A-Frame library (used to create 3D/AR/VR scenes with HTML) -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <!-- Load MindAR (used for detecting images with your camera) -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
     <style>
+      /* This styles the "Start AR" button */
       #start-button {
         position: absolute;
-        z-index: 9999;
+        z-index: 9999;  /* Makes sure it stays on top of everything else */
         top: 20px;
         left: 20px;
         padding: 10px 20px;
@@ -14,20 +21,24 @@
       }
     </style>
   </head>
+
   <body>
+    <!-- This button starts the AR experience -->
     <button id="start-button">Start AR</button>
 
+    <!-- This is the AR scene (it starts off hidden) -->
     <a-scene
       id="ar-scene"
-      style="display: none;"
+      style="display: none;"  <!-- Hide the scene until the button is clicked -->
       mindar-image="imageTargetSrc: targets.mind; uiError:no; uiScanning:no; autoStart: false;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
+      <!-- Load and store audio files that we’ll use when targets are found -->
       <a-assets>
-        <!-- Load all 10 audio files -->
+        <!-- 10 audio files, one for each target image -->
         <audio id="audio-0" src="audio/audio0.mp3" preload="auto"></audio>
         <audio id="audio-1" src="audio/audio1.mp3" preload="auto"></audio>
         <audio id="audio-2" src="audio/audio2.mp3" preload="auto"></audio>
@@ -40,14 +51,15 @@
         <audio id="audio-9" src="audio/audio9.mp3" preload="auto"></audio>
       </a-assets>
 
+      <!-- This camera tracks what the user sees -->
       <a-camera
         position="0 0 0"
-        look-controls="enabled: false"
-        cursor="fuse: false; rayOrigin: mouse;"
-        raycaster="near: 10; far: 10000;"
+        look-controls="enabled: false"  <!-- No head-tracking or looking around -->
+        cursor="fuse: false; rayOrigin: mouse;"  <!-- Allow interaction with mouse -->
+        raycaster="near: 10; far: 10000;"  <!-- Detect objects within this range -->
       ></a-camera>
 
-      <!-- Create 10 targets -->
+      <!-- These are the 10 image targets. Each one matches an image in the targets.mind file. -->
       <a-entity id="target-0" mindar-image-target="targetIndex: 0"></a-entity>
       <a-entity id="target-1" mindar-image-target="targetIndex: 1"></a-entity>
       <a-entity id="target-2" mindar-image-target="targetIndex: 2"></a-entity>
@@ -60,67 +72,74 @@
       <a-entity id="target-9" mindar-image-target="targetIndex: 9"></a-entity>
     </a-scene>
 
+    <!-- This is the main JavaScript that controls how the app works -->
     <script>
-        const startButton = document.getElementById("start-button");
-        const sceneEl = document.querySelector("a-scene");
-      
-        // Get all audio elements in an array
-        const allAudios = Array.from({ length: 10 }, (_, i) =>
-          document.querySelector(`#audio-${i}`)
-        );
-      
-        const stopAllAudio = () => {
-          allAudios.forEach((audio) => {
-            audio.pause();
-            audio.currentTime = 0;
-          });
-        };
-      
-        // Ensure AudioContext resumes (for iOS/Safari)
-        const resumeAudioContext = () => {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            const context = new AudioContext();
-            if (context.state === "suspended") {
-              context.resume().then(() => {
-                console.log("AudioContext resumed");
-              });
-            }
-          }
-        };
-      
-        startButton.addEventListener("click", () => {
-          startButton.style.display = "none";
-          sceneEl.style.display = "block";
-          resumeAudioContext();
-      
-          let arSystem;
-          sceneEl.addEventListener("loaded", () => {
-            arSystem = sceneEl.systems["mindar-image-system"];
-            arSystem.start();
-          });
-      
-          // Attach event listeners to each target/audio pair
-          for (let i = 0; i < 10; i++) {
-            const target = document.querySelector(`#target-${i}`);
-            const audio = document.querySelector(`#audio-${i}`);
-      
-            target.addEventListener("targetFound", () => {
-              console.log(`Target ${i} found`);
-              stopAllAudio();
-              audio.currentTime = 0;
-              audio.play().catch((e) =>
-                console.warn(`Audio ${i} play failed:`, e)
-              );
-            });
-      
-            target.addEventListener("targetLost", () => {
-              console.log(`Target ${i} lost`);
-              audio.pause();
-              audio.currentTime = 0;
-            });
-          }
+      const startButton = document.getElementById("start-button"); // The start button
+      const sceneEl = document.querySelector("a-scene"); // The AR scene
+
+      // Create an array of all 10 audio elements
+      const allAudios = Array.from({ length: 10 }, (_, i) =>
+        document.querySelector(`#audio-${i}`)
+      );
+
+      // This function stops any audio that is currently playing
+      const stopAllAudio = () => {
+        allAudios.forEach((audio) => {
+          audio.pause(); // Pause it
+          audio.currentTime = 0; // Rewind it back to the start
         });
-      </script>      
+      };
+
+      // iOS devices often block sound unless there's user interaction.
+      // This function makes sure the audio system is active.
+      const resumeAudioContext = () => {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const context = new AudioContext();
+          if (context.state === "suspended") {
+            context.resume().then(() => {
+              console.log("AudioContext resumed");
+            });
+          }
+        }
+      };
+
+      // This runs when the user clicks the "Start AR" button
+      startButton.addEventListener("click", () => {
+        startButton.style.display = "none"; // Hide the button
+        sceneEl.style.display = "block"; // Show the AR scene
+        resumeAudioContext(); // Fix audio on mobile devices
+
+        // When the scene is ready, start the MindAR tracking system
+        let arSystem;
+        sceneEl.addEventListener("loaded", () => {
+          arSystem = sceneEl.systems["mindar-image-system"];
+          arSystem.start(); // Start looking for image targets
+        });
+
+        // For each of the 10 image targets, set up what happens when found/lost
+        for (let i = 0; i < 10; i++) {
+          const target = document.querySelector(`#target-${i}`); // Get the image target
+          const audio = document.querySelector(`#audio-${i}`);   // Get the matching audio
+
+          // When the image is seen by the camera
+          target.addEventListener("targetFound", () => {
+            console.log(`Target ${i} found`);
+            stopAllAudio(); // Stop any other audio that might be playing
+            audio.currentTime = 0; // Make sure audio starts from the beginning
+            audio.play().catch((e) =>
+              console.warn(`Audio ${i} play failed:`, e) // Log any errors
+            );
+          });
+
+          // When the image is no longer seen
+          target.addEventListener("targetLost", () => {
+            console.log(`Target ${i} lost`);
+            audio.pause(); // Stop the audio
+            audio.currentTime = 0; // Rewind it
+          });
+        }
+      });
+    </script>
   </body>
 </html>
