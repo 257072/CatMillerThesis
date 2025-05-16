@@ -86,17 +86,32 @@
       };
     
       let currentPlayingIndex = null;
+      let arSystemReady = false;
+      let arSystem;
+    
+      // ✅ Scene loaded handler — outside click event
+      sceneEl.addEventListener("loaded", () => {
+        arSystem = sceneEl.systems["mindar-image-system"];
+        arSystemReady = true;
+        console.log("A-Frame scene loaded and AR system is ready.");
+      });
     
       startButton.addEventListener("click", () => {
         startButton.style.display = "none";
         sceneEl.style.display = "block";
         resumeAudioContext();
       
-        let arSystem;
-        sceneEl.addEventListener("loaded", () => {
-          arSystem = sceneEl.systems["mindar-image-system"];
+        // If scene is already loaded, start AR
+        if (arSystemReady && arSystem) {
           arSystem.start();
-        });
+        } else {
+          // Fallback in case scene loads slightly after click
+          sceneEl.addEventListener("loaded", () => {
+            arSystem = sceneEl.systems["mindar-image-system"];
+            arSystem.start();
+            console.log("Fallback: AR system started after scene load.");
+          });
+        }
       
         for (let i = 0; i < 10; i++) {
           const target = document.querySelector(`#target-${i}`);
@@ -108,19 +123,21 @@
             if (currentPlayingIndex !== i) {
               stopAllAudio();
               currentPlayingIndex = i;
+            
+              // Just in case audio needs to be loaded
+              audio.load();
               audio.play().catch((e) =>
                 console.warn(`Audio ${i} play failed:`, e)
               );
             }
           });
         
-          // Optional: do nothing on targetLost, or just log it
+          // Keep audio playing even if target is lost
           target.addEventListener("targetLost", () => {
             console.log(`Target ${i} lost`);
-            // Do nothing to allow audio to keep playing
           });
         }
       });
-    </script>  
+    </script>
   </body>
 </html>
