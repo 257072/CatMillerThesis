@@ -27,6 +27,7 @@
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
+        <!-- Use preload="auto" for better loading on iOS -->
         <audio loop id="audio-0" src="audio/mp3/audio0.mp3" preload="auto"></audio>
         <audio loop id="audio-1" src="audio/mp3/audio1.mp3" preload="auto"></audio>
         <audio loop id="audio-2" src="audio/mp3/audio2.mp3" preload="auto"></audio>
@@ -46,6 +47,7 @@
         raycaster="near: 10; far: 10000;"
       ></a-camera>
 
+      <!-- AR targets -->
       <a-entity id="target-0" mindar-image-target="targetIndex: 0"></a-entity>
       <a-entity id="target-1" mindar-image-target="targetIndex: 1"></a-entity>
       <a-entity id="target-2" mindar-image-target="targetIndex: 2"></a-entity>
@@ -61,18 +63,18 @@
     <script>
       const startButton = document.getElementById("start-button");
       const sceneEl = document.querySelector("a-scene");
-        
+
       const allAudios = Array.from({ length: 10 }, (_, i) =>
         document.querySelector(`#audio-${i}`)
       );
-        
+
       const stopAllAudio = () => {
         allAudios.forEach((audio) => {
           audio.pause();
-          // audio.currentTime = 0;
+          audio.currentTime = 0;
         });
       };
-    
+
       const resumeAudioContext = () => {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (AudioContext) {
@@ -84,56 +86,64 @@
           }
         }
       };
-    
+
       let currentPlayingIndex = null;
       let arSystemReady = false;
       let arSystem;
-    
+
       sceneEl.addEventListener("loaded", () => {
         arSystem = sceneEl.systems["mindar-image-system"];
         arSystemReady = true;
         console.log("A-Frame scene loaded and AR system is ready.");
       });
-    
+
       startButton.addEventListener("click", () => {
         startButton.style.display = "none";
         sceneEl.style.display = "block";
         resumeAudioContext();
-      
-        // If scene is already loaded, start AR
+
+        // Unlock all audio elements on iOS
+        allAudios.forEach((audio) => {
+          audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          }).catch((err) => {
+            console.warn("Audio unlock failed:", err);
+          });
+        });
+
+        // Start AR
         if (arSystemReady && arSystem) {
           arSystem.start();
         } else {
-          // Fallback in case scene loads slightly after click
           sceneEl.addEventListener("loaded", () => {
             arSystem = sceneEl.systems["mindar-image-system"];
             arSystem.start();
             console.log("Fallback: AR system started after scene load.");
           });
         }
-      
+
+        // Target listeners
         for (let i = 0; i < 10; i++) {
           const target = document.querySelector(`#target-${i}`);
           const audio = document.querySelector(`#audio-${i}`);
-        
+
           target.addEventListener("targetFound", () => {
             console.log(`Target ${i} found`);
-          
+
             if (currentPlayingIndex !== i) {
               stopAllAudio();
               currentPlayingIndex = i;
-            
-              // Just in case audio needs to be loaded
-              audio.load();
+
               audio.play().catch((e) =>
                 console.warn(`Audio ${i} play failed:`, e)
               );
             }
           });
-        
-          // Keep audio playing even if target is lost
+
           target.addEventListener("targetLost", () => {
             console.log(`Target ${i} lost`);
+            // Keep audio playing
           });
         }
       });
