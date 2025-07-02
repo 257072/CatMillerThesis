@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,6 +18,7 @@
   </head>
   <body>
     <button id="start-button">Start AR</button>
+    
     <a-scene
       id="ar-scene"
       style="display: none;"
@@ -26,19 +28,7 @@
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <a-assets>
-        <!-- Use preload="auto" for better loading on iOS -->
-        <audio loop id="audio-0" src="audio/mp3/audio0.mp3" preload="auto"></audio>
-        <audio loop id="audio-1" src="audio/mp3/audio1.mp3" preload="auto"></audio>
-        <audio loop id="audio-2" src="audio/mp3/audio2.mp3" preload="auto"></audio>
-        <audio loop id="audio-3" src="audio/mp3/audio3.mp3" preload="auto"></audio>
-        <audio loop id="audio-4" src="audio/mp3/audio4.mp3" preload="auto"></audio>
-        <audio loop id="audio-5" src="audio/mp3/audio5.mp3" preload="auto"></audio>
-        <audio loop id="audio-6" src="audio/mp3/audio6.mp3" preload="auto"></audio>
-        <audio loop id="audio-7" src="audio/mp3/audio7.mp3" preload="auto"></audio>
-        <audio loop id="audio-8" src="audio/mp3/audio8.mp3" preload="auto"></audio>
-        <audio loop id="audio-9" src="audio/mp3/audio9.mp3" preload="auto"></audio>
-      </a-assets>
+      <a-assets></a-assets>
 
       <a-camera
         position="0 0 0"
@@ -64,30 +54,55 @@
       const startButton = document.getElementById("start-button");
       const sceneEl = document.querySelector("a-scene");
 
-      const allAudios = Array.from({ length: 10 }, (_, i) =>
-        document.querySelector(`#audio-${i}`)
-      );
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffers = {};
+      let currentSource = null;
+      let currentPlayingIndex = null;
 
       const stopAllAudio = () => {
-        allAudios.forEach((audio) => {
-          audio.pause();
-          audio.currentTime = 0;
-        });
-      };
-
-      const resumeAudioContext = () => {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          const context = new AudioContext();
-          if (context.state === "suspended") {
-            context.resume().then(() => {
-              console.log("AudioContext resumed");
-            });
+        if (currentSource) {
+          try {
+            currentSource.stop();
+            currentSource.disconnect();
+          } catch (e) {
+            console.warn("Error stopping audio:", e);
           }
+          currentSource = null;
         }
+        currentPlayingIndex = null;
       };
 
-      let currentPlayingIndex = null;
+      const playAudio = (index) => {
+        stopAllAudio();
+        const buffer = audioBuffers[index];
+        if (!buffer) return;
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(audioContext.destination);
+        source.start(0);
+
+        currentSource = source;
+        currentPlayingIndex = index;
+      };
+
+      const loadAudio = async (index) => {
+        const response = await fetch(`audio/mp3/audio${index}.mp3`);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        audioBuffers[index] = audioBuffer;
+      };
+
+      const loadAllAudio = async () => {
+        const loadPromises = [];
+        for (let i = 0; i < 10; i++) {
+          loadPromises.push(loadAudio(i));
+        }
+        await Promise.all(loadPromises);
+        console.log("All audio buffers loaded");
+      };
+
       let arSystemReady = false;
       let arSystem;
 
@@ -97,22 +112,19 @@
         console.log("A-Frame scene loaded and AR system is ready.");
       });
 
-      startButton.addEventListener("click", () => {
+      startButton.addEventListener("click", async () => {
         startButton.style.display = "none";
         sceneEl.style.display = "block";
-        resumeAudioContext();
 
-        // Unlock all audio elements on iOS
-        allAudios.forEach((audio) => {
-          audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }).catch((err) => {
-            console.warn("Audio unlock failed:", err);
-          });
-        });
+        try {
+          await audioContext.resume();
+          console.log("AudioContext resumed");
+        } catch (err) {
+          console.warn("AudioContext resume failed", err);
+        }
 
-        // Start AR
+        await loadAllAudio();
+
         if (arSystemReady && arSystem) {
           arSystem.start();
         } else {
@@ -123,21 +135,13 @@
           });
         }
 
-        // Target listeners
+        // Add listeners to targets
         for (let i = 0; i < 10; i++) {
           const target = document.querySelector(`#target-${i}`);
-          const audio = document.querySelector(`#audio-${i}`);
-
           target.addEventListener("targetFound", () => {
             console.log(`Target ${i} found`);
-
             if (currentPlayingIndex !== i) {
-              stopAllAudio();
-              currentPlayingIndex = i;
-
-              audio.play().catch((e) =>
-                console.warn(`Audio ${i} play failed:`, e)
-              );
+              playAudio(i);
             }
           });
 
