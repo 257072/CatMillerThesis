@@ -1,5 +1,9 @@
 📱 MindAR Image Tracking with Audio Playback
 
+Scan this QR code on your phone to start AR.
+
+![QR code for website](qr-code.png)
+
 This is a simple Augmented Reality (AR) web app built using A-Frame and MindAR, designed to play a specific audio clip when an image target is detected by your device's camera.
 🧠 What It Does
 
