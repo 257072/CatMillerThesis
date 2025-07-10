@@ -22,7 +22,7 @@
     <a-scene
       id="ar-scene"
       style="display: none;"
-      mindar-image="imageTargetSrc: targets.mind; uiError:no; uiScanning:no; autoStart: false;"
+      mindar-image="imageTargetSrc: targets.mind; uiError:no; uiScanning:no; autoStart: false; maxTrack: 1;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
@@ -38,26 +38,59 @@
       ></a-camera>
       
       <!-- AR targets -->
-      <a-entity id="target-0" mindar-image-target="targetIndex: 0"/>
-      <a-entity id="target-1" mindar-image-target="targetIndex: 1"/>
-      <a-entity id="target-2" mindar-image-target="targetIndex: 2"/>
-      <a-entity id="target-3" mindar-image-target="targetIndex: 3"/>
-      <a-entity id="target-4" mindar-image-target="targetIndex: 4"/>
-      <a-entity id="target-5" mindar-image-target="targetIndex: 5"/>
-      <a-entity id="target-6" mindar-image-target="targetIndex: 6"/>
-      <a-entity id="target-7" mindar-image-target="targetIndex: 7"/>
-      <a-entity id="target-8" mindar-image-target="targetIndex: 8"/>
-      <a-entity id="target-9" mindar-image-target="targetIndex: 9"/>
-      <a-entity id="target-10" mindar-image-target="targetIndex: 10"/>
-      <a-entity id="target-11" mindar-image-target="targetIndex: 11"/>
-      <a-entity id="target-12" mindar-image-target="targetIndex: 12"/>
-      <a-entity id="target-13" mindar-image-target="targetIndex: 13"/>
-      <a-entity id="target-14" mindar-image-target="targetIndex: 14"/>
-      <a-entity id="target-15" mindar-image-target="targetIndex: 15"/>
+      <a-entity id="target-0" mindar-image-target="targetIndex: 0">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/0_Love_Is.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-1" mindar-image-target="targetIndex: 1">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/1_Awakened.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-2" mindar-image-target="targetIndex: 2">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/2_Angels_On_Earth.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-3" mindar-image-target="targetIndex: 3">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/3_Polaris.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-4" mindar-image-target="targetIndex: 4">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/4_Holiness_Of_The_Heart.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-5" mindar-image-target="targetIndex: 5">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/5_WLTM_GSOH.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-6" mindar-image-target="targetIndex: 6">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/6_Prayer_Song.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-7" mindar-image-target="targetIndex: 7">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/7_New_Now.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-8" mindar-image-target="targetIndex: 8">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/8_Kaleidoscope_Memories.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-9" mindar-image-target="targetIndex: 9">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/9_Elixir_Of_Love.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-10" mindar-image-target="targetIndex: 10">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/10_Love_Made_Visible.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-11" mindar-image-target="targetIndex: 11">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/11_Love_Made_Visible.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-12" mindar-image-target="targetIndex: 12">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/12_Reflections.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-13" mindar-image-target="targetIndex: 13">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/13_swim.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-14" mindar-image-target="targetIndex: 14">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/14_SelfMastery.jpg" visible="false"></a-plane>
+      </a-entity>
+      <a-entity id="target-15" mindar-image-target="targetIndex: 15">
+        <a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/15_JoySmile.jpg" visible="false"></a-plane>
+      </a-entity>
 
     </a-scene>
 
     <script>
+      const NUM_TARGETS = 16; // Update this to match the number of targets
       const startButton = document.getElementById("start-button");
       const sceneEl = document.querySelector("a-scene");
 
@@ -65,6 +98,9 @@
       const audioBuffers = {};
       let currentSource = null;
       let currentPlayingIndex = null;
+      let targetFoundTimers = {};
+      let targetLostTimers = {};
+      const DEBOUNCE_DELAY = 500; // 500ms debounce
 
       const stopAllAudio = () => {
         if (currentSource) {
@@ -103,7 +139,7 @@
 
       const loadAllAudio = async () => {
         const loadPromises = [];
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < NUM_TARGETS; i++) {
           loadPromises.push(loadAudio(i));
         }
         await Promise.all(loadPromises);
@@ -143,19 +179,49 @@
         }
 
         // Add listeners to targets
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < NUM_TARGETS; i++) {
           const target = document.querySelector(`#target-${i}`);
-          target.addEventListener("targetFound", () => {
-            console.log(`Target ${i} found`);
-            if (currentPlayingIndex !== i) {
-              playAudio(i);
-            }
-          });
+          if (target) {
+            target.addEventListener("targetFound", () => {
+              // Clear any pending lost timer for this target
+              if (targetLostTimers[i]) {
+                clearTimeout(targetLostTimers[i]);
+                delete targetLostTimers[i];
+              }
+              
+              // Debounce target found events
+              if (targetFoundTimers[i]) {
+                clearTimeout(targetFoundTimers[i]);
+              }
+              
+              targetFoundTimers[i] = setTimeout(() => {
+                console.log(`Target ${i} found (confirmed)`);
+                if (currentPlayingIndex !== i) {
+                  playAudio(i);
+                }
+                delete targetFoundTimers[i];
+              }, DEBOUNCE_DELAY);
+            });
 
-          target.addEventListener("targetLost", () => {
-            console.log(`Target ${i} lost`);
-            // Keep audio playing
-          });
+            target.addEventListener("targetLost", () => {
+              // Clear any pending found timer for this target
+              if (targetFoundTimers[i]) {
+                clearTimeout(targetFoundTimers[i]);
+                delete targetFoundTimers[i];
+              }
+              
+              // Debounce target lost events
+              if (targetLostTimers[i]) {
+                clearTimeout(targetLostTimers[i]);
+              }
+              
+              targetLostTimers[i] = setTimeout(() => {
+                console.log(`Target ${i} lost (confirmed)`);
+                // Keep audio playing even when target is lost
+                delete targetLostTimers[i];
+              }, DEBOUNCE_DELAY);
+            });
+          }
         }
       });
     </script>
