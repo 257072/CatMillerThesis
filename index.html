@@ -104,7 +104,7 @@
 
       const loadAllAudio = async () => {
         const loadPromises = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 16; i++) {
           loadPromises.push(loadAudio(i));
         }
         await Promise.all(loadPromises);
