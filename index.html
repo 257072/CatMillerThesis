@@ -5,6 +5,59 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
+
+      /* Loading overlay */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        color: white;
+        display: none; /* hidden until start AR is clicked */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 1;
+        transition: opacity 1s ease;
+      }
+      #loading-screen.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Progress bar */
+      .progress-container {
+        width: 80%;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 20px;
+      }
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: limegreen;
+        transition: width 0.2s ease;
+      }
+      .progress-text {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+      .status-text {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+
+      /* Start button */
       #start-button {
         position: absolute;
         z-index: 9999;
@@ -17,6 +70,14 @@
     </style>
   </head>
   <body>
+    <div id="loading-screen">
+      <div class="status-text" id="status-text">Initializing AR...</div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="progress-text" id="progress-text">0%</div>
+    </div>
+
     <button id="start-button">Start AR</button>
     
     <a-scene
@@ -93,6 +154,10 @@
       const NUM_TARGETS = 16; // Update this to match the number of targets
       const startButton = document.getElementById("start-button");
       const sceneEl = document.querySelector("a-scene");
+      const loadingScreen = document.getElementById("loading-screen");
+      const progressBar = document.getElementById("progress-bar");
+      const progressText = document.getElementById("progress-text");
+      const statusText = document.getElementById("status-text");
 
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const audioBuffers = {};
@@ -101,6 +166,35 @@
       let targetFoundTimers = {};
       let targetLostTimers = {};
       const DEBOUNCE_DELAY = 500; // 500ms debounce
+
+      // Progress tracking
+      let totalSteps = NUM_TARGETS + 2; // audio files + AR system ready + tracking ready
+      let completedSteps = 0;
+
+      const updateProgress = () => {
+        let percent = Math.round((completedSteps / totalSteps) * 100);
+        progressBar.style.width = percent + "%";
+        progressText.textContent = percent + "%";
+      };
+
+      const markStepComplete = (statusMessage) => {
+        completedSteps++;
+        updateProgress();
+        if (statusMessage) {
+          statusText.textContent = statusMessage;
+        }
+        
+        if (completedSteps >= totalSteps) {
+          statusText.textContent = "AR Ready!";
+          // Fade out loading screen after a brief delay
+          setTimeout(() => {
+            loadingScreen.classList.add("fade-out");
+            setTimeout(() => {
+              loadingScreen.style.display = "none";
+            }, 1000);
+          }, 500);
+        }
+      };
 
       const stopAllAudio = () => {
         if (currentSource) {
@@ -135,14 +229,14 @@
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         audioBuffers[index] = audioBuffer;
+        markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS}`);
       };
 
       const loadAllAudio = async () => {
-        const loadPromises = [];
+        statusText.textContent = "Loading audio files...";
         for (let i = 0; i < NUM_TARGETS; i++) {
-          loadPromises.push(loadAudio(i));
+          await loadAudio(i);
         }
-        await Promise.all(loadPromises);
         console.log("All audio buffers loaded");
       };
 
@@ -153,11 +247,13 @@
         arSystem = sceneEl.systems["mindar-image-system"];
         arSystemReady = true;
         console.log("A-Frame scene loaded and AR system is ready.");
+        markStepComplete("AR system initialized");
       });
 
       startButton.addEventListener("click", async () => {
         startButton.style.display = "none";
         sceneEl.style.display = "block";
+        loadingScreen.style.display = "flex"; // show loading overlay
 
         try {
           await audioContext.resume();
@@ -166,15 +262,25 @@
           console.warn("AudioContext resume failed", err);
         }
 
-        await loadAllAudio();
+        // Start loading audio in background
+        loadAllAudio();
 
+        // Start MindAR
         if (arSystemReady && arSystem) {
           arSystem.start();
+          // Check when tracking is ready
+          setTimeout(() => {
+            markStepComplete("Camera tracking ready");
+          }, 1000);
         } else {
           sceneEl.addEventListener("loaded", () => {
             arSystem = sceneEl.systems["mindar-image-system"];
             arSystem.start();
             console.log("Fallback: AR system started after scene load.");
+            // Check when tracking is ready
+            setTimeout(() => {
+              markStepComplete("Camera tracking ready");
+            }, 1000);
           });
         }
 
