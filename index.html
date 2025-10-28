@@ -244,17 +244,23 @@
         sceneEl.style.display = 'block';
         loadingScreen.style.display = 'flex';
 
-        // ✅ Start AR immediately to preserve gesture trust (Safari fix)
-        if (arSystemReady && arSystem) {
-          arSystem.start();
-          console.log('AR system started immediately on click.');
-        } else {
-          sceneEl.addEventListener('loaded', () => {
-            arSystem = sceneEl.systems['mindar-image-system'];
-            arSystem.start();
-            console.log('Fallback: AR system started after scene load.');
-          });
-        }
+        // ✅ Start AR after audio resume and short delay (prevents reload loop)
+setTimeout(async () => {
+  try {
+    if (!arSystemReady) {
+      arSystem = sceneEl.systems['mindar-image-system'];
+    }
+    if (arSystem && !arSystem.isStarted) {
+      console.log('Starting AR system after 500ms delay...');
+      await arSystem.start();
+      console.log('AR system successfully started.');
+      markStepComplete('Camera tracking ready');
+    }
+  } catch (err) {
+    console.error('Error starting AR system:', err);
+  }
+}, 500);
+
 
         // Resume audio after AR start
         try {
