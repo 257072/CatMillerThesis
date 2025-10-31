@@ -255,14 +255,17 @@
       const progressText = document.getElementById('progress-text');
       const statusText = document.getElementById('status-text');
 
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
-      const audioBuffers = {};
-      let currentSource = null;
-      let currentPlayingIndex = null;
-      let targetFoundTimers = {};
-      let targetLostTimers = {};
-      const DEBOUNCE_DELAY = 500;
+     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffers = {};
+let currentSource = null;
+let currentPlayingIndex = null;
+let targetFoundTimers = {};
+let targetLostTimers = {};
+const DEBOUNCE_DELAY = 500;
+
+// NEW: control first song autoplay
+let firstSongReady = false;
+
 
       let totalSteps = NUM_TARGETS + 2;
       let completedSteps = 0;
@@ -302,17 +305,20 @@
       };
 
       const playAudio = (index) => {
-        stopAllAudio();
-        const buffer = audioBuffers[index];
-        if (!buffer) return;
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        source.connect(audioContext.destination);
-        source.start(0);
-        currentSource = source;
-        currentPlayingIndex = index;
-      };
+  // Prevent first song from playing too early
+  if (index === 0 && !firstSongReady) return;
+
+  stopAllAudio();
+  const buffer = audioBuffers[index];
+  if (!buffer) return;
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(audioContext.destination);
+  source.start(0);
+  currentSource = source;
+  currentPlayingIndex = index;
+};
 
       const loadAudio = async (index) => {
         const response = await fetch(`audio/mp3/audio${index}.mp3`);
@@ -392,6 +398,7 @@ setTimeout(async () => {
               }
               targetFoundTimers[i] = setTimeout(() => {
                 console.log(`Target ${i} found (confirmed)`);
+                if (i === 0) firstSongReady = true;
                 if (currentPlayingIndex !== i) {
                   playAudio(i);
                 }
