@@ -85,83 +85,155 @@
   </a-scene>
 
   <script>
-    const NUM_TARGETS = 16;
-    const startButton = document.getElementById('start-button');
-    const sceneEl = document.querySelector('a-scene');
-    const loadingScreen = document.getElementById('loading-screen');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const statusText = document.getElementById('status-text');
+const NUM_TARGETS = 16;
+const startButton = document.getElementById('start-button');
+const sceneEl = document.querySelector('a-scene');
+const loadingScreen = document.getElementById('loading-screen');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+const statusText = document.getElementById('status-text');
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const audioBuffers = {};
-    let currentSource = null;
-    let currentPlayingIndex = null;
-    const DEBOUNCE_DELAY = 500;
-    let firstSongReady = false;
-    let totalSteps = NUM_TARGETS + 2;
-    let completedSteps = 0;
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffers = {};
+let currentSource = null;
+let currentPlayingIndex = null;
+let targetFoundTimers = {};
+let targetLostTimers = {};
+const DEBOUNCE_DELAY = 500;
+let firstSongReady = false;
 
-    const updateProgress = () => {
-      let percent = Math.round((completedSteps / totalSteps) * 100);
-      progressBar.style.width = percent + '%';
-      progressText.textContent = percent + '%';
-    };
+let totalSteps = NUM_TARGETS + 2;
+let completedSteps = 0;
 
-    const markStepComplete = (msg) => {
-      completedSteps++;
-      updateProgress();
-      if (msg) statusText.textContent = msg;
-      if (completedSteps >= totalSteps) {
-        statusText.textContent = 'AR Ready!';
-        setTimeout(() => { loadingScreen.classList.add('fade-out'); setTimeout(() => { loadingScreen.style.display='none'; }, 1000); }, 500);
-      }
-    };
+const updateProgress = () => {
+  let percent = Math.round((completedSteps / totalSteps) * 100);
+  progressBar.style.width = percent + '%';
+  progressText.textContent = percent + '%';
+};
 
-    const stopAllAudio = () => { if(currentSource){ try{ currentSource.stop(); currentSource.disconnect(); }catch(e){} currentSource=null; } currentPlayingIndex=null; };
-    const playAudio = (index) => { if(index===0 && !firstSongReady) return; stopAllAudio(); const buffer=audioBuffers[index]; if(!buffer) return; const source=audioContext.createBufferSource(); source.buffer=buffer; source.loop=true; source.connect(audioContext.destination); source.start(0); currentSource=source; currentPlayingIndex=index; };
-    const loadAudio = async (index) => { const response=await fetch(`audio/mp3/audio${index}.mp3`); const arrayBuffer=await response.arrayBuffer(); const audioBuffer=await audioContext.decodeAudioData(arrayBuffer); audioBuffers[index]=audioBuffer; markStepComplete(`Loading audio ${index+1}/${NUM_TARGETS}`); };
-    const loadAllAudio = async () => { statusText.textContent='Loading audio files...'; for(let i=0;i<NUM_TARGETS;i++){ await loadAudio(i); } };
+const markStepComplete = (msg) => {
+  completedSteps++;
+  updateProgress();
+  if (msg) statusText.textContent = msg;
+  if (completedSteps >= totalSteps) {
+    statusText.textContent = 'AR Ready!';
+    setTimeout(() => {
+      loadingScreen.classList.add('fade-out');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+      }, 1000);
+    }, 500);
+  }
+};
 
-    let arSystemReady=false;
-    let arSystem;
+const stopAllAudio = () => {
+  if (currentSource) {
+    try { currentSource.stop(); currentSource.disconnect(); } catch(e){}
+    currentSource = null;
+  }
+  currentPlayingIndex = null;
+};
 
-    // ---------- Universal Start Button ----------
-    startButton.addEventListener('click', async () => {
-      startButton.style.display='none';
-      sceneEl.style.display='block';
-      loadingScreen.style.display='flex';
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-        const videoEl=document.createElement('video');
-        videoEl.autoplay=true;
-        videoEl.playsInline=true;
-        videoEl.srcObject=stream;
-        await videoEl.play().catch(()=>{});
-        sceneEl.systems['mindar-image-system'].videoEl=videoEl;
+const playAudio = (index) => {
+  if (index === 0 && !firstSongReady) return;
+  stopAllAudio();
+  const buffer = audioBuffers[index];
+  if (!buffer) return;
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(audioContext.destination);
+  source.start(0);
+  currentSource = source;
+  currentPlayingIndex = index;
+};
 
-        await audioContext.resume();
-        if(!arSystemReady) arSystem=sceneEl.systems['mindar-image-system'];
-        await arSystem.start();
-        markStepComplete('Camera tracking ready');
-        loadAllAudio();
-      } catch(err){
-        statusText.textContent='Camera access required.';
-        console.error(err);
-      }
-    });
+const loadAudio = async (index) => {
+  const response = await fetch(`audio/mp3/audio${index}.mp3`);
+  const arrayBuffer = await response.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  audioBuffers[index] = audioBuffer;
+  markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS}`);
+};
 
-    sceneEl.addEventListener('loaded', () => { arSystem = sceneEl.systems['mindar-image-system']; arSystemReady=true; markStepComplete('AR system initialized'); });
+const loadAllAudio = async () => {
+  statusText.textContent = 'Loading audio files...';
+  for (let i = 0; i < NUM_TARGETS; i++) await loadAudio(i);
+};
 
-    // ---------- Target Events ----------
-    const targetFoundTimers={};
-    const targetLostTimers={};
-    for(let i=0;i<NUM_TARGETS;i++){
-      const target=document.querySelector(`#target-${i}`);
-      if(!target) continue;
-      target.addEventListener('targetFound',()=>{ if(targetLostTimers[i]){clearTimeout(targetLostTimers[i]); delete targetLostTimers[i];} if(targetFoundTimers[i]){clearTimeout(targetFoundTimers[i]);} targetFoundTimers[i]=setTimeout(()=>{ if(i===0) firstSongReady=true; if(currentPlayingIndex!==i) playAudio(i); delete targetFoundTimers[i]; },DEBOUNCE_DELAY); });
-      target.addEventListener('targetLost',()=>{ if(targetFoundTimers[i]){clearTimeout(targetFoundTimers[i]); delete targetFoundTimers[i];} if(targetLostTimers[i]){clearTimeout(targetLostTimers[i]);} targetLostTimers[i]=setTimeout(()=>{ delete targetLostTimers[i]; },DEBOUNCE_DELAY); });
+let arSystemReady = false;
+let arSystem;
+
+// ---------- Camera & Start Button Handler ----------
+startButton.addEventListener('click', async () => {
+  // Check for browser camera support
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("Your browser does not support AR camera access. Please try Chrome, Firefox, Edge, or Safari.");
+    return;
+  }
+
+  startButton.style.display = 'none';
+  sceneEl.style.display = 'block';
+  loadingScreen.style.display = 'flex';
+
+  try {
+    // Request environment camera
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    
+    // Attach video to MindAR
+    const videoEl = document.createElement('video');
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.srcObject = stream;
+    await videoEl.play().catch(() => {});
+    
+    if (sceneEl.systems['mindar-image-system']) {
+      sceneEl.systems['mindar-image-system'].videoEl = videoEl;
+      arSystem = sceneEl.systems['mindar-image-system'];
+      await arSystem.start();
+      arSystemReady = true;
+      markStepComplete('Camera tracking ready');
     }
-  </script>
+
+    // Resume audio context
+    await audioContext.resume().catch(() => {});
+    loadAllAudio();
+    
+  } catch (err) {
+    console.error("Camera access denied or error starting AR:", err);
+    statusText.textContent = "Camera access is required to start AR.";
+  }
+});
+
+// ---------- AR System Loaded Event ----------
+sceneEl.addEventListener('loaded', () => {
+  arSystem = sceneEl.systems['mindar-image-system'];
+  arSystemReady = true;
+  markStepComplete('AR system initialized');
+});
+
+// ---------- Target Event Listeners ----------
+for (let i = 0; i < NUM_TARGETS; i++) {
+  const target = document.querySelector(`#target-${i}`);
+  if (!target) continue;
+
+  target.addEventListener('targetFound', () => {
+    if (targetLostTimers[i]) { clearTimeout(targetLostTimers[i]); delete targetLostTimers[i]; }
+    if (targetFoundTimers[i]) clearTimeout(targetFoundTimers[i]);
+    targetFoundTimers[i] = setTimeout(() => {
+      if (i === 0) firstSongReady = true;
+      if (currentPlayingIndex !== i) playAudio(i);
+      delete targetFoundTimers[i];
+    }, DEBOUNCE_DELAY);
+  });
+
+  target.addEventListener('targetLost', () => {
+    if (targetFoundTimers[i]) { clearTimeout(targetFoundTimers[i]); delete targetFoundTimers[i]; }
+    if (targetLostTimers[i]) clearTimeout(targetLostTimers[i]);
+    targetLostTimers[i] = setTimeout(() => { delete targetLostTimers[i]; }, DEBOUNCE_DELAY);
+  });
+}
+</script>
+
 </body>
 </html>
