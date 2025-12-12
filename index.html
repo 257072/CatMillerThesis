@@ -90,8 +90,9 @@ if (location.hostname === "github.io" || location.hostname.includes("github.com"
   location.href = "https://belove.info";
 }
 
-// ---------- AR & Audio Setup ----------
+// ---------- AR & Audio Script ----------
 const NUM_TARGETS = 16;
+const startButton = document.getElementById('start-button');
 const sceneEl = document.querySelector('a-scene');
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -102,11 +103,9 @@ const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 const audioBuffers = {};
 let currentSource = null;
 let currentPlayingIndex = null;
-let targetFoundTimers = {};
-let targetLostTimers = {};
 const DEBOUNCE_DELAY = 500;
-
 let firstSongReady = false;
+
 let totalSteps = NUM_TARGETS + 2;
 let completedSteps = 0;
 
@@ -133,7 +132,10 @@ const markStepComplete = (msg) => {
 
 const stopAllAudio = () => {
   if (currentSource) {
-    try { currentSource.stop(); currentSource.disconnect(); } catch(e){}
+    try {
+      currentSource.stop();
+      currentSource.disconnect();
+    } catch (e) {}
     currentSource = null;
   }
   currentPlayingIndex = null;
@@ -171,50 +173,51 @@ const loadAllAudio = async () => {
 let arSystemReady = false;
 let arSystem;
 
-// ---------- Camera Permission Modal ----------
-const cameraModal = document.getElementById('camera-permission-modal');
-const grantBtn = document.getElementById('grant-camera-btn');
-
-grantBtn.addEventListener('click', async () => {
+// ---------- Camera Permission Handler ----------
+const requestCameraPermission = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    cameraModal.style.display = 'none';
-
-    // assign stream to MindAR system
-    if (sceneEl && sceneEl.systems['mindar-image-system']) {
-      const videoEl = document.createElement('video');
-      videoEl.autoplay = true;
-      videoEl.playsInline = true;
-      videoEl.srcObject = stream;
-      await videoEl.play().catch(err => console.warn('Video play failed:', err));
-      sceneEl.systems['mindar-image-system'].videoEl = videoEl;
-    }
-
-    // start AR & audio after permission
-    startARAndAudio();
-
+    const videoEl = document.createElement('video');
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.srcObject = stream;
+    await videoEl.play().catch(err => console.warn('Video play failed:', err));
+    sceneEl.systems['mindar-image-system'].videoEl = videoEl;
+    return true;
   } catch (err) {
     console.error("Camera access denied:", err);
-    alert("Camera access is required to start AR.");
+    return false;
   }
-});
+};
 
-// ---------- Function to Start AR and Audio ----------
-async function startARAndAudio() {
+// ---------- Start Button Handler ----------
+startButton.addEventListener('click', async () => {
+  startButton.style.display = 'none';
+  loadingScreen.style.display = 'flex';
+
+  const granted = await requestCameraPermission();
+  if (!granted) {
+    statusText.textContent = "Camera permission is required to start AR.\nPlease enable camera in your browser settings.";
+    return;
+  }
+
+  sceneEl.style.display = 'block';
+  await audioContext.resume().catch(() => {});
+
+  if (!arSystemReady) {
+    arSystem = sceneEl.systems['mindar-image-system'];
+  }
+
   try {
-    await audioContext.resume().catch(() => {});
-    if (!arSystemReady) arSystem = sceneEl.systems['mindar-image-system'];
     await arSystem.start();
     console.log("MindAR started.");
     markStepComplete('Camera tracking ready');
-
-    // load all audio after permission
     loadAllAudio();
   } catch (err) {
     console.error("Error starting AR:", err);
     statusText.textContent = "Failed to start AR. Please reload.";
   }
-}
+});
 
 // ---------- AR System Loaded Event ----------
 sceneEl.addEventListener('loaded', () => {
@@ -228,25 +231,25 @@ for (let i = 0; i < NUM_TARGETS; i++) {
   const target = document.querySelector(`#target-${i}`);
   if (!target) continue;
 
+  let targetFoundTimer, targetLostTimer;
+
   target.addEventListener('targetFound', () => {
-    if (targetLostTimers[i]) { clearTimeout(targetLostTimers[i]); delete targetLostTimers[i]; }
-    if (targetFoundTimers[i]) { clearTimeout(targetFoundTimers[i]); }
-    targetFoundTimers[i] = setTimeout(() => {
+    clearTimeout(targetLostTimer);
+    clearTimeout(targetFoundTimer);
+    targetFoundTimer = setTimeout(() => {
       if (i === 0) firstSongReady = true;
       if (currentPlayingIndex !== i) playAudio(i);
-      delete targetFoundTimers[i];
     }, DEBOUNCE_DELAY);
   });
 
   target.addEventListener('targetLost', () => {
-    if (targetFoundTimers[i]) { clearTimeout(targetFoundTimers[i]); delete targetFoundTimers[i]; }
-    if (targetLostTimers[i]) { clearTimeout(targetLostTimers[i]); }
-    targetLostTimers[i] = setTimeout(() => {
-      delete targetLostTimers[i];
-    }, DEBOUNCE_DELAY);
+    clearTimeout(targetFoundTimer);
+    clearTimeout(targetLostTimer);
+    targetLostTimer = setTimeout(() => {}, DEBOUNCE_DELAY);
   });
 }
 </script>
+
 
 
 </body>
