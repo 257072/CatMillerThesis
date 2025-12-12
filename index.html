@@ -365,11 +365,27 @@
           arSystem = sceneEl.systems['mindar-image-system'];
         }
         if (arSystem && !arSystem.isStarted) {
-          console.log('Starting MindAR after permission...');
-          await arSystem.start();
-          console.log('MindAR started.');
-          markStepComplete('Camera tracking ready');
-        }
+  console.log('Starting MindAR after permission...');
+
+  // Force the camera video element to attach for iOS
+  const cameraEl = document.querySelector('a-camera');
+  const videoEl = sceneEl.renderer.xr?.getCamera?.() || document.createElement('video');
+  cameraEl.object3D.visible = true; // ensure camera is active
+  if (!videoEl.srcObject) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      videoEl.srcObject = stream;
+      await videoEl.play();
+    } catch (err) {
+      console.error('Camera attach failed:', err);
+    }
+  }
+
+  await arSystem.start();
+  console.log('MindAR started.');
+  markStepComplete('Camera tracking ready');
+}
+
       } catch (err) {
         console.error('Error starting AR system:', err);
       }
