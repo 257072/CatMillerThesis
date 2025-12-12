@@ -201,6 +201,36 @@
     </div>
 
     <button id="start-button">Start AR</button>
+    <!-- iOS Camera Permission Modal -->
+<div id="camera-permission-modal" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+">
+  <div style="text-align:center; max-width: 300px;">
+    <p style="font-size:18px; font-weight:600; margin-bottom:20px;">
+      To start AR, your camera needs permission.
+    </p>
+    <button id="grant-camera-btn" style="
+        padding: 12px 24px;
+        font-size:16px;
+        font-weight:600;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        background:#fff;
+        color:#000;
+    ">Grant Camera Access</button>
+  </div>
+</div>
+
 
     <a-scene
       id="ar-scene"
@@ -335,6 +365,44 @@
   let arSystemReady = false;
   let arSystem;
 
+      startButton.addEventListener('click', async () => {
+  // Hide start button and show AR scene
+  startButton.style.display = 'none';
+  sceneEl.style.display = 'block';
+  loadingScreen.style.display = 'flex';
+
+  // Ensure MindAR system is ready
+  if (!arSystemReady) {
+    arSystem = sceneEl.systems['mindar-image-system'];
+  }
+
+  // If the modal already granted a camera stream, use it
+  const videoStream = sceneEl.systems['mindar-image-system']?.videoEl?.srcObject;
+
+  if (!videoStream) {
+    // If for some reason the modal didn't provide a stream, warn user
+    statusText.textContent = "Camera not ready. Please grant permission.";
+    return;
+  }
+
+  try {
+    // Resume audio context
+    await audioContext.resume().catch(() => {});
+
+    // Start MindAR
+    await arSystem.start();
+    console.log("MindAR started.");
+    markStepComplete('Camera tracking ready');
+
+    // Load all audio
+    loadAllAudio();
+  } catch (err) {
+    console.error("Error starting AR:", err);
+    statusText.textContent = "Failed to start AR. Please reload.";
+  }
+});
+
+      
   sceneEl.addEventListener('loaded', () => {
     arSystem = sceneEl.systems['mindar-image-system'];
     arSystemReady = true;
