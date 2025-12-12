@@ -85,8 +85,13 @@
   </a-scene>
 
   <script>
+// ---------- Redirect GitHub URL to belove.info ----------
+if (location.hostname === "github.io" || location.hostname.includes("github.com")) {
+  location.href = "https://belove.info";
+}
+
+// ---------- AR & Audio Setup ----------
 const NUM_TARGETS = 16;
-const startButton = document.getElementById('start-button');
 const sceneEl = document.querySelector('a-scene');
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -100,8 +105,8 @@ let currentPlayingIndex = null;
 let targetFoundTimers = {};
 let targetLostTimers = {};
 const DEBOUNCE_DELAY = 500;
-let firstSongReady = false;
 
+let firstSongReady = false;
 let totalSteps = NUM_TARGETS + 2;
 let completedSteps = 0;
 
@@ -158,52 +163,58 @@ const loadAudio = async (index) => {
 
 const loadAllAudio = async () => {
   statusText.textContent = 'Loading audio files...';
-  for (let i = 0; i < NUM_TARGETS; i++) await loadAudio(i);
+  for (let i = 0; i < NUM_TARGETS; i++) {
+    await loadAudio(i);
+  }
 };
 
 let arSystemReady = false;
 let arSystem;
 
-// ---------- Camera & Start Button Handler ----------
-startButton.addEventListener('click', async () => {
-  // Check for browser camera support
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Your browser does not support AR camera access. Please try Chrome, Firefox, Edge, or Safari.");
-    return;
-  }
+// ---------- Camera Permission Modal ----------
+const cameraModal = document.getElementById('camera-permission-modal');
+const grantBtn = document.getElementById('grant-camera-btn');
 
-  startButton.style.display = 'none';
-  sceneEl.style.display = 'block';
-  loadingScreen.style.display = 'flex';
-
+grantBtn.addEventListener('click', async () => {
   try {
-    // Request environment camera
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    
-    // Attach video to MindAR
-    const videoEl = document.createElement('video');
-    videoEl.autoplay = true;
-    videoEl.playsInline = true;
-    videoEl.srcObject = stream;
-    await videoEl.play().catch(() => {});
-    
-    if (sceneEl.systems['mindar-image-system']) {
+    cameraModal.style.display = 'none';
+
+    // assign stream to MindAR system
+    if (sceneEl && sceneEl.systems['mindar-image-system']) {
+      const videoEl = document.createElement('video');
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      videoEl.srcObject = stream;
+      await videoEl.play().catch(err => console.warn('Video play failed:', err));
       sceneEl.systems['mindar-image-system'].videoEl = videoEl;
-      arSystem = sceneEl.systems['mindar-image-system'];
-      await arSystem.start();
-      arSystemReady = true;
-      markStepComplete('Camera tracking ready');
     }
 
-    // Resume audio context
-    await audioContext.resume().catch(() => {});
-    loadAllAudio();
-    
+    // start AR & audio after permission
+    startARAndAudio();
+
   } catch (err) {
-    console.error("Camera access denied or error starting AR:", err);
-    statusText.textContent = "Camera access is required to start AR.";
+    console.error("Camera access denied:", err);
+    alert("Camera access is required to start AR.");
   }
 });
+
+// ---------- Function to Start AR and Audio ----------
+async function startARAndAudio() {
+  try {
+    await audioContext.resume().catch(() => {});
+    if (!arSystemReady) arSystem = sceneEl.systems['mindar-image-system'];
+    await arSystem.start();
+    console.log("MindAR started.");
+    markStepComplete('Camera tracking ready');
+
+    // load all audio after permission
+    loadAllAudio();
+  } catch (err) {
+    console.error("Error starting AR:", err);
+    statusText.textContent = "Failed to start AR. Please reload.";
+  }
+}
 
 // ---------- AR System Loaded Event ----------
 sceneEl.addEventListener('loaded', () => {
@@ -219,7 +230,7 @@ for (let i = 0; i < NUM_TARGETS; i++) {
 
   target.addEventListener('targetFound', () => {
     if (targetLostTimers[i]) { clearTimeout(targetLostTimers[i]); delete targetLostTimers[i]; }
-    if (targetFoundTimers[i]) clearTimeout(targetFoundTimers[i]);
+    if (targetFoundTimers[i]) { clearTimeout(targetFoundTimers[i]); }
     targetFoundTimers[i] = setTimeout(() => {
       if (i === 0) firstSongReady = true;
       if (currentPlayingIndex !== i) playAudio(i);
@@ -229,11 +240,14 @@ for (let i = 0; i < NUM_TARGETS; i++) {
 
   target.addEventListener('targetLost', () => {
     if (targetFoundTimers[i]) { clearTimeout(targetFoundTimers[i]); delete targetFoundTimers[i]; }
-    if (targetLostTimers[i]) clearTimeout(targetLostTimers[i]);
-    targetLostTimers[i] = setTimeout(() => { delete targetLostTimers[i]; }, DEBOUNCE_DELAY);
+    if (targetLostTimers[i]) { clearTimeout(targetLostTimers[i]); }
+    targetLostTimers[i] = setTimeout(() => {
+      delete targetLostTimers[i];
+    }, DEBOUNCE_DELAY);
   });
 }
 </script>
+
 
 </body>
 </html>
