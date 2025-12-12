@@ -277,124 +277,139 @@
       </a-entity>
     </a-scene>
 
-    <script>
-  const NUM_TARGETS = 16;
-  const startButton = document.getElementById('start-button');
-  const sceneEl = document.querySelector('a-scene');
-  const loadingScreen = document.getElementById('loading-screen');
-  const progressBar = document.getElementById('progress-bar');
-  const progressText = document.getElementById('progress-text');
-  const statusText = document.getElementById('status-text');
+   <script>
+const NUM_TARGETS = 16;
+const startButton = document.getElementById('start-button');
+const sceneEl = document.querySelector('a-scene');
+const loadingScreen = document.getElementById('loading-screen');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+const statusText = document.getElementById('status-text');
 
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const audioBuffers = {};
-  let currentSource = null;
-  let currentPlayingIndex = null;
-  let targetFoundTimers = {};
-  let targetLostTimers = {};
-  const DEBOUNCE_DELAY = 500;
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffers = {};
+let currentSource = null;
+let currentPlayingIndex = null;
+let targetFoundTimers = {};
+let targetLostTimers = {};
+const DEBOUNCE_DELAY = 500;
 
-  let firstSongReady = false;
+let firstSongReady = false;
 
-  let totalSteps = NUM_TARGETS + 2;
-  let completedSteps = 0;
+let totalSteps = NUM_TARGETS + 2;
+let completedSteps = 0;
 
-  const updateProgress = () => {
-    let percent = Math.round((completedSteps / totalSteps) * 100);
-    progressBar.style.width = percent + '%';
-    progressText.textContent = percent + '%';
-  };
+const updateProgress = () => {
+  let percent = Math.round((completedSteps / totalSteps) * 100);
+  progressBar.style.width = percent + '%';
+  progressText.textContent = percent + '%';
+};
 
-  const markStepComplete = (msg) => {
-    completedSteps++;
-    updateProgress();
-    if (msg) statusText.textContent = msg;
-    if (completedSteps >= totalSteps) {
-      statusText.textContent = 'AR Ready!';
+const markStepComplete = (msg) => {
+  completedSteps++;
+  updateProgress();
+  if (msg) statusText.textContent = msg;
+  if (completedSteps >= totalSteps) {
+    statusText.textContent = 'AR Ready!';
+    setTimeout(() => {
+      loadingScreen.classList.add('fade-out');
       setTimeout(() => {
-        loadingScreen.classList.add('fade-out');
-        setTimeout(() => {
-          loadingScreen.style.display = 'none';
-        }, 1000);
-      }, 500);
+        loadingScreen.style.display = 'none';
+      }, 1000);
+    }, 500);
+  }
+};
+
+const stopAllAudio = () => {
+  if (currentSource) {
+    try {
+      currentSource.stop();
+      currentSource.disconnect();
+    } catch (e) {}
+    currentSource = null;
+  }
+  currentPlayingIndex = null;
+};
+
+const playAudio = (index) => {
+  if (index === 0 && !firstSongReady) return;
+
+  stopAllAudio();
+  const buffer = audioBuffers[index];
+  if (!buffer) return;
+
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(audioContext.destination);
+  source.start(0);
+  currentSource = source;
+  currentPlayingIndex = index;
+};
+
+const loadAudio = async (index) => {
+  const response = await fetch(`audio/mp3/audio${index}.mp3`);
+  const arrayBuffer = await response.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  audioBuffers[index] = audioBuffer;
+  markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS}`);
+};
+
+const loadAllAudio = async () => {
+  statusText.textContent = 'Loading audio files...';
+  for (let i = 0; i < NUM_TARGETS; i++) {
+    await loadAudio(i);
+  }
+};
+
+let arSystemReady = false;
+let arSystem;
+
+// ---------- Camera Modal Handler ----------
+const cameraModal = document.getElementById('camera-permission-modal');
+const grantBtn = document.getElementById('grant-camera-btn');
+
+grantBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    cameraModal.style.display = 'none';
+    console.log("Camera permission granted.");
+    if (sceneEl && sceneEl.systems['mindar-image-system']) {
+      const videoEl = document.createElement('video');
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      videoEl.srcObject = stream;
+      await videoEl.play().catch(err => console.warn('Video play failed:', err));
+      sceneEl.systems['mindar-image-system'].videoEl = videoEl;
     }
-  };
+  } catch (err) {
+    console.error("Camera access denied:", err);
+    statusText.textContent = "Camera access is required to start AR.";
+  }
+});
 
-  const stopAllAudio = () => {
-    if (currentSource) {
-      try {
-        currentSource.stop();
-        currentSource.disconnect();
-      } catch (e) {}
-      currentSource = null;
-    }
-    currentPlayingIndex = null;
-  };
-
-  const playAudio = (index) => {
-    if (index === 0 && !firstSongReady) return;
-
-    stopAllAudio();
-    const buffer = audioBuffers[index];
-    if (!buffer) return;
-
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
-    source.connect(audioContext.destination);
-    source.start(0);
-    currentSource = source;
-    currentPlayingIndex = index;
-  };
-
-  const loadAudio = async (index) => {
-    const response = await fetch(`audio/mp3/audio${index}.mp3`);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    audioBuffers[index] = audioBuffer;
-    markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS}`);
-  };
-
-  const loadAllAudio = async () => {
-    statusText.textContent = 'Loading audio files...';
-    for (let i = 0; i < NUM_TARGETS; i++) {
-      await loadAudio(i);
-    }
-  };
-
-  let arSystemReady = false;
-  let arSystem;
-
-      startButton.addEventListener('click', async () => {
-  // Hide start button and show AR scene
+// ---------- Clean Start Button Handler ----------
+startButton.addEventListener('click', async () => {
   startButton.style.display = 'none';
   sceneEl.style.display = 'block';
   loadingScreen.style.display = 'flex';
 
-  // Ensure MindAR system is ready
-  if (!arSystemReady) {
-    arSystem = sceneEl.systems['mindar-image-system'];
-  }
-
-  // If the modal already granted a camera stream, use it
   const videoStream = sceneEl.systems['mindar-image-system']?.videoEl?.srcObject;
 
   if (!videoStream) {
-    // If for some reason the modal didn't provide a stream, warn user
     statusText.textContent = "Camera not ready. Please grant permission.";
     return;
   }
 
   try {
-    // Resume audio context
     await audioContext.resume().catch(() => {});
-
-    // Start MindAR
+    if (!arSystemReady) {
+      arSystem = sceneEl.systems['mindar-image-system'];
+    }
     await arSystem.start();
     console.log("MindAR started.");
     markStepComplete('Camera tracking ready');
 
-    // Load all audio
     loadAllAudio();
   } catch (err) {
     console.error("Error starting AR:", err);
@@ -402,102 +417,50 @@
   }
 });
 
-      
-  sceneEl.addEventListener('loaded', () => {
-    arSystem = sceneEl.systems['mindar-image-system'];
-    arSystemReady = true;
-    markStepComplete('AR system initialized');
-  });
-
-  startButton.addEventListener('click', async () => {
-  startButton.style.display = 'none';
-  sceneEl.style.display = 'block';
-  loadingScreen.style.display = 'flex';
-
-  let stream;
-  try {
-    // 1️⃣ Request camera once
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    console.log("Camera permission granted.");
-  } catch (err) {
-    console.error("Camera permission denied:", err);
-    statusText.textContent = "Camera access is required to start AR.";
-    return;
-  }
-
-  // 2️⃣ Attach stream to a hidden video element for MindAR
-  const videoEl = document.createElement('video');
-  videoEl.autoplay = true;
-  videoEl.playsInline = true;
-  videoEl.srcObject = stream;
-  await videoEl.play().catch(err => console.warn('Video play failed:', err));
-
-  // 3️⃣ Pass video element to MindAR system
-  if (!arSystemReady) {
-    arSystem = sceneEl.systems['mindar-image-system'];
-  }
-  arSystem.videoEl = videoEl;
-
-  // 4️⃣ Resume audio
-  try {
-    await audioContext.resume();
-    console.log("AudioContext resumed");
-  } catch (err) {
-    console.warn("AudioContext resume failed", err);
-  }
-
-  // 5️⃣ Start MindAR
-  try {
-    await arSystem.start();
-    console.log("MindAR started.");
-    markStepComplete('Camera tracking ready');
-  } catch (err) {
-    console.error("MindAR start failed:", err);
-    statusText.textContent = "Failed to start AR. Please reload and try again.";
-  }
-
-  // 6️⃣ Load all audio
-  loadAllAudio();
+// ---------- AR System Loaded Event ----------
+sceneEl.addEventListener('loaded', () => {
+  arSystem = sceneEl.systems['mindar-image-system'];
+  arSystemReady = true;
+  markStepComplete('AR system initialized');
 });
 
+// ---------- Target Event Listeners ----------
+for (let i = 0; i < NUM_TARGETS; i++) {
+  const target = document.querySelector(`#target-${i}`);
+  if (!target) continue;
 
-    // Target event listeners
-    for (let i = 0; i < NUM_TARGETS; i++) {
-      const target = document.querySelector(`#target-${i}`);
-      if (!target) continue;
-
-      target.addEventListener('targetFound', () => {
-        if (targetLostTimers[i]) {
-          clearTimeout(targetLostTimers[i]);
-          delete targetLostTimers[i];
-        }
-        if (targetFoundTimers[i]) {
-          clearTimeout(targetFoundTimers[i]);
-        }
-        targetFoundTimers[i] = setTimeout(() => {
-          if (i === 0) firstSongReady = true;
-          if (currentPlayingIndex !== i) {
-            playAudio(i);
-          }
-          delete targetFoundTimers[i];
-        }, DEBOUNCE_DELAY);
-      });
-
-      target.addEventListener('targetLost', () => {
-        if (targetFoundTimers[i]) {
-          clearTimeout(targetFoundTimers[i]);
-          delete targetFoundTimers[i];
-        }
-        if (targetLostTimers[i]) {
-          clearTimeout(targetLostTimers[i]);
-        }
-        targetLostTimers[i] = setTimeout(() => {
-          delete targetLostTimers[i];
-        }, DEBOUNCE_DELAY);
-      });
+  target.addEventListener('targetFound', () => {
+    if (targetLostTimers[i]) {
+      clearTimeout(targetLostTimers[i]);
+      delete targetLostTimers[i];
     }
+    if (targetFoundTimers[i]) {
+      clearTimeout(targetFoundTimers[i]);
+    }
+    targetFoundTimers[i] = setTimeout(() => {
+      if (i === 0) firstSongReady = true;
+      if (currentPlayingIndex !== i) {
+        playAudio(i);
+      }
+      delete targetFoundTimers[i];
+    }, DEBOUNCE_DELAY);
   });
+
+  target.addEventListener('targetLost', () => {
+    if (targetFoundTimers[i]) {
+      clearTimeout(targetFoundTimers[i]);
+      delete targetFoundTimers[i];
+    }
+    if (targetLostTimers[i]) {
+      clearTimeout(targetLostTimers[i]);
+    }
+    targetLostTimers[i] = setTimeout(() => {
+      delete targetLostTimers[i];
+    }, DEBOUNCE_DELAY);
+  });
+}
 </script>
+
 
   </body>
 </html>
