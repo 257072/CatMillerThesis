@@ -1,13 +1,5 @@
 <!DOCTYPE html>
 
-<script>
-// ---------- Redirect GitHub URL to belove.info only in Safari ----------
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-if (isSafari && (location.hostname === "github.io" || location.hostname.includes("github.com"))) {
-  location.href = "https://belove.info";
-}
-</script>
-
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -94,10 +86,6 @@ if (isSafari && (location.hostname === "github.io" || location.hostname.includes
   </a-scene>
 
   <script>
-// ---------- Redirect GitHub URL to belove.info ----------
-if (location.hostname === "github.io" || location.hostname.includes("github.com")) {
-  location.href = "https://belove.info";
-}
 
 // ---------- AR & Audio Script ----------
 const NUM_TARGETS = 16;
