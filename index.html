@@ -190,28 +190,28 @@ const requestCameraPermission = async () => {
 startButton.addEventListener('click', async () => {
   startButton.style.display = 'none';
   loadingScreen.style.display = 'flex';
+  statusText.textContent = 'Waking Audio...';
+
+  await audioContext.resume().catch(() => {});
 
   const granted = await requestCameraPermission();
   if (!granted) {
-    statusText.textContent = "Camera permission is required to start AR.\nPlease enable camera in your browser settings.";
+    statusText.textContent = "Camera permission required.";
+    startButton.style.display = 'block';
     return;
   }
 
   sceneEl.style.display = 'block';
-  await audioContext.resume().catch(() => {});
-
-  if (!arSystemReady) {
-    arSystem = sceneEl.systems['mindar-image-system'];
-  }
+  arSystem = sceneEl.systems['mindar-image-system'];
 
   try {
     await arSystem.start();
-    console.log("MindAR started.");
-    markStepComplete('Camera tracking ready');
-    loadAllAudio();
+    markStepComplete('AR system active');
+    // Start loading audio ONLY after AR is confirmed active
+    loadAllAudio(); 
   } catch (err) {
     console.error("Error starting AR:", err);
-    statusText.textContent = "Failed to start AR. Please reload.";
+    statusText.textContent = "System Error. Please reload.";
   }
 });
 
