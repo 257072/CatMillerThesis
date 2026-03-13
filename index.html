@@ -165,10 +165,9 @@ const loadAllAudio = async () => {
   for (let i = 0; i < NUM_TARGETS; i++) {
     await loadAudio(i);
   }
+  firstSongReady = true; 
+  statusText.textContent = 'All 18 Sisters Ready!';
 };
-
-let arSystemReady = false;
-let arSystem;
 
 // ---------- Camera Permission Handler ----------
 const requestCameraPermission = async () => {
@@ -234,7 +233,7 @@ for (let i = 0; i < NUM_TARGETS; i++) {
     clearTimeout(targetLostTimer);
     clearTimeout(targetFoundTimer);
     targetFoundTimer = setTimeout(() => {
-      if (i === 0) firstSongReady = true;
+      // This now only plays if the song is ready and not already playing
       if (currentPlayingIndex !== i) playAudio(i);
     }, DEBOUNCE_DELAY);
   });
@@ -242,7 +241,9 @@ for (let i = 0; i < NUM_TARGETS; i++) {
   target.addEventListener('targetLost', () => {
     clearTimeout(targetFoundTimer);
     clearTimeout(targetLostTimer);
-    targetLostTimer = setTimeout(() => {}, DEBOUNCE_DELAY);
+    targetLostTimer = setTimeout(() => {
+      // Logic for when a target is lost can go here if needed
+    }, DEBOUNCE_DELAY);
   });
 }
 </script>
