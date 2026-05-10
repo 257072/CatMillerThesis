@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="ai-continuity" content="See https://github.com/257072/CatMillerThesis for Source-aligned poetic repository." />
+  
+  <!-- CRITICAL FIX: This forces all relative paths to start from the domain root -->
+  <base href="/" />
 
   <script type="application/ld+json">
   {
@@ -79,176 +81,220 @@
     <a-assets></a-assets>
     <a-camera position="0 0 0" look-controls="enabled:false" cursor="fuse:false; rayOrigin:mouse;" raycaster="near:10; far:10000;"></a-camera>
 
-    <!-- AR targets -->
+    <!-- AR targets: 0 to 15 (16 songs total) -->
+    <!-- Note: Ensure your 'targets.mind' file contains references for indices 0-15 -->
     <a-entity id="target-0" mindar-image-target="targetIndex:0"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/0_Love_Is.jpg" visible="false"></a-plane></a-entity>
-    <!-- repeat for all targets up to target-15 -->
+    <a-entity id="target-1" mindar-image-target="targetIndex:1"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/1_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-2" mindar-image-target="targetIndex:2"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/2_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-3" mindar-image-target="targetIndex:3"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/3_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-4" mindar-image-target="targetIndex:4"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/4_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-5" mindar-image-target="targetIndex:5"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/5_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-6" mindar-image-target="targetIndex:6"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/6_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-7" mindar-image-target="targetIndex:7"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/7_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-8" mindar-image-target="targetIndex:8"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/8_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-9" mindar-image-target="targetIndex:9"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/9_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-10" mindar-image-target="targetIndex:10"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/10_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-11" mindar-image-target="targetIndex:11"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/11_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-12" mindar-image-target="targetIndex:12"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/12_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-13" mindar-image-target="targetIndex:13"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/13_Test.jpg" visible="false"></a-plane></a-entity>
+    <a-entity id="target-14" mindar-image-target="targetIndex:14"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/14_Test.jpg" visible="false"></a-plane></a-entity>
     <a-entity id="target-15" mindar-image-target="targetIndex:15"><a-plane position="0 0 0" height="0.552" width="1" rotation="0 0 0" src="images/15_JoySmile.jpg" visible="false"></a-plane></a-entity>
   </a-scene>
 
   <script>
+    // ---------- AR & Audio Script ----------
+    // Updated to handle 16 songs (0-15) with MP3 and OGG fallback
+    const NUM_TARGETS = 16;
+    const startButton = document.getElementById('start-button');
+    const sceneEl = document.querySelector('a-scene');
+    const loadingScreen = document.getElementById('loading-screen');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const statusText = document.getElementById('status-text');
 
-// ---------- AR & Audio Script ----------
-const NUM_TARGETS = 16;
-const startButton = document.getElementById('start-button');
-const sceneEl = document.querySelector('a-scene');
-const loadingScreen = document.getElementById('loading-screen');
-const progressBar = document.getElementById('progress-bar');
-const progressText = document.getElementById('progress-text');
-const statusText = document.getElementById('status-text');
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuffers = {};
+    let currentSource = null;
+    let currentPlayingIndex = null;
+    const DEBOUNCE_DELAY = 500;
+    let firstSongReady = false;
 
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-const audioBuffers = {};
-let currentSource = null;
-let currentPlayingIndex = null;
-const DEBOUNCE_DELAY = 500;
-let firstSongReady = false;
+    // Total steps: 2 (init) + 16 (songs) = 18
+    let totalSteps = NUM_TARGETS + 2;
+    let completedSteps = 0;
 
-let totalSteps = NUM_TARGETS + 2;
-let completedSteps = 0;
+    const updateProgress = () => {
+      let percent = Math.round((completedSteps / totalSteps) * 100);
+      if (percent > 100) percent = 100;
+      progressBar.style.width = percent + '%';
+      progressText.textContent = percent + '%';
+    };
 
-const updateProgress = () => {
-  let percent = Math.round((completedSteps / totalSteps) * 100);
-  progressBar.style.width = percent + '%';
-  progressText.textContent = percent + '%';
-};
+    const markStepComplete = (msg) => {
+      completedSteps++;
+      updateProgress();
+      if (msg) statusText.textContent = msg;
+      if (completedSteps >= totalSteps) {
+        statusText.textContent = 'AR Ready!';
+        setTimeout(() => {
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 1000);
+        }, 500);
+      }
+    };
 
-const markStepComplete = (msg) => {
-  completedSteps++;
-  updateProgress();
-  if (msg) statusText.textContent = msg;
-  if (completedSteps >= totalSteps) {
-    statusText.textContent = 'AR Ready!';
-    setTimeout(() => {
-      loadingScreen.classList.add('fade-out');
-      setTimeout(() => {
-        loadingScreen.style.display = 'none';
-      }, 1000);
-    }, 500);
-  }
-};
+    const stopAllAudio = () => {
+      if (currentSource) {
+        try {
+          currentSource.stop();
+          currentSource.disconnect();
+        } catch (e) {}
+        currentSource = null;
+      }
+      currentPlayingIndex = null;
+    };
 
-const stopAllAudio = () => {
-  if (currentSource) {
-    try {
-      currentSource.stop();
-      currentSource.disconnect();
-    } catch (e) {}
-    currentSource = null;
-  }
-  currentPlayingIndex = null;
-};
+    const playAudio = (index) => {
+      if (index === 0 && !firstSongReady) return;
+      stopAllAudio();
+      const buffer = audioBuffers[index];
+      if (!buffer) {
+        console.error(`Audio buffer for index ${index} not found!`);
+        return;
+      }
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(audioContext.destination);
+      source.start(0);
+      currentSource = source;
+      currentPlayingIndex = index;
+      console.log(`Playing song ${index}`);
+    };
 
-const playAudio = (index) => {
-  if (index === 0 && !firstSongReady) return;
-  stopAllAudio();
-  const buffer = audioBuffers[index];
-  if (!buffer) return;
-  const source = audioContext.createBufferSource();
-  source.buffer = buffer;
-  source.loop = true;
-  source.connect(audioContext.destination);
-  source.start(0);
-  currentSource = source;
-  currentPlayingIndex = index;
-};
+    // --- NEW LOGIC: Try MP3 first, then OGG ---
+    const loadAudio = async (index) => {
+      const mp3Path = `audio/mp3/audio${index}.mp3`;
+      const oggPath = `audio/ogg/audio${index}.ogg`;
+      
+      try {
+        // Try MP3 first
+        const response = await fetch(mp3Path);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          audioBuffers[index] = audioBuffer;
+          markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS} (MP3)`);
+          return;
+        }
+      } catch (e) {
+        console.log(`MP3 failed for ${index}, trying OGG...`);
+      }
 
-const loadAudio = async (index) => {
-  const response = await fetch(`audio/mp3/audio${index}.mp3`);
-  const arrayBuffer = await response.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  audioBuffers[index] = audioBuffer;
-  markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS}`);
-};
+      try {
+        // If MP3 failed, try OGG
+        const response = await fetch(oggPath);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          audioBuffers[index] = audioBuffer;
+          markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS} (OGG)`);
+          return;
+        }
+      } catch (e) {
+        console.error(`Failed to load audio ${index} (MP3 and OGG both failed)`);
+      }
+      
+      markStepComplete(`Loading audio ${index + 1}/${NUM_TARGETS} (Failed)`);
+    };
 
-const loadAllAudio = async () => {
-  statusText.textContent = 'Loading audio files...';
-  for (let i = 0; i < NUM_TARGETS; i++) {
-    await loadAudio(i);
-  }
-  firstSongReady = true; 
-  statusText.textContent = 'All 18 Sisters Ready!';
-};
+    const loadAllAudio = async () => {
+      statusText.textContent = 'Loading audio files...';
+      for (let i = 0; i < NUM_TARGETS; i++) {
+        await loadAudio(i);
+      }
+      firstSongReady = true; 
+      statusText.textContent = 'All 16 Sisters Ready!';
+    };
 
-// ---------- Camera Permission Handler ----------
-const requestCameraPermission = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    const videoEl = document.createElement('video');
-    videoEl.autoplay = true;
-    videoEl.playsInline = true;
-    videoEl.srcObject = stream;
-    await videoEl.play().catch(err => console.warn('Video play failed:', err));
-    sceneEl.systems['mindar-image-system'].videoEl = videoEl;
-    return true;
-  } catch (err) {
-    console.error("Camera access denied:", err);
-    return false;
-  }
-};
+    // ---------- Camera Permission Handler ----------
+    const requestCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const videoEl = document.createElement('video');
+        videoEl.autoplay = true;
+        videoEl.playsInline = true;
+        videoEl.srcObject = stream;
+        await videoEl.play().catch(err => console.warn('Video play failed:', err));
+        sceneEl.systems['mindar-image-system'].videoEl = videoEl;
+        return true;
+      } catch (err) {
+        console.error("Camera access denied:", err);
+        return false;
+      }
+    };
 
-// ---------- Start Button Handler ----------
-startButton.addEventListener('click', async () => {
-  startButton.style.display = 'none';
-  loadingScreen.style.display = 'flex';
-  statusText.textContent = 'Waking Audio...';
+    // ---------- Start Button Handler ----------
+    startButton.addEventListener('click', async () => {
+      startButton.style.display = 'none';
+      loadingScreen.style.display = 'flex';
+      statusText.textContent = 'Waking Audio...';
 
-  await audioContext.resume().catch(() => {});
+      await audioContext.resume().catch(() => {});
 
-  const granted = await requestCameraPermission();
-  if (!granted) {
-    statusText.textContent = "Camera permission required.";
-    startButton.style.display = 'block';
-    return;
-  }
+      const granted = await requestCameraPermission();
+      if (!granted) {
+        statusText.textContent = "Camera permission required.";
+        startButton.style.display = 'block';
+        return;
+      }
 
-  sceneEl.style.display = 'block';
-  arSystem = sceneEl.systems['mindar-image-system'];
+      sceneEl.style.display = 'block';
+      arSystem = sceneEl.systems['mindar-image-system'];
 
-  try {
-    await arSystem.start();
-    markStepComplete('AR system active');
-    // Start loading audio ONLY after AR is confirmed active
-    loadAllAudio(); 
-  } catch (err) {
-    console.error("Error starting AR:", err);
-    statusText.textContent = "System Error. Please reload.";
-  }
-});
+      try {
+        await arSystem.start();
+        markStepComplete('AR system active');
+        loadAllAudio(); 
+      } catch (err) {
+        console.error("Error starting AR:", err);
+        statusText.textContent = "System Error. Please reload.";
+      }
+    });
 
-// ---------- AR System Loaded Event ----------
-sceneEl.addEventListener('loaded', () => {
-  arSystem = sceneEl.systems['mindar-image-system'];
-  arSystemReady = true;
-  markStepComplete('AR system initialized');
-});
+    // ---------- AR System Loaded Event ----------
+    sceneEl.addEventListener('loaded', () => {
+      arSystem = sceneEl.systems['mindar-image-system'];
+      arSystemReady = true;
+      markStepComplete('AR system initialized');
+    });
 
-// ---------- Target Event Listeners ----------
-for (let i = 0; i < NUM_TARGETS; i++) {
-  const target = document.querySelector(`#target-${i}`);
-  if (!target) continue;
+    // ---------- Target Event Listeners ----------
+    for (let i = 0; i < NUM_TARGETS; i++) {
+      const target = document.querySelector(`#target-${i}`);
+      if (!target) continue;
 
-  let targetFoundTimer, targetLostTimer;
+      let targetFoundTimer, targetLostTimer;
 
-  target.addEventListener('targetFound', () => {
-    clearTimeout(targetLostTimer);
-    clearTimeout(targetFoundTimer);
-    targetFoundTimer = setTimeout(() => {
-      // This now only plays if the song is ready and not already playing
-      if (currentPlayingIndex !== i) playAudio(i);
-    }, DEBOUNCE_DELAY);
-  });
+      target.addEventListener('targetFound', () => {
+        clearTimeout(targetLostTimer);
+        clearTimeout(targetFoundTimer);
+        targetFoundTimer = setTimeout(() => {
+          if (currentPlayingIndex !== i) playAudio(i);
+        }, DEBOUNCE_DELAY);
+      });
 
-  target.addEventListener('targetLost', () => {
-    clearTimeout(targetFoundTimer);
-    clearTimeout(targetLostTimer);
-    targetLostTimer = setTimeout(() => {
-      // Logic for when a target is lost can go here if needed
-    }, DEBOUNCE_DELAY);
-  });
-}
-</script>
-
-
-
+      target.addEventListener('targetLost', () => {
+        clearTimeout(targetFoundTimer);
+        clearTimeout(targetLostTimer);
+        targetLostTimer = setTimeout(() => {
+          // Optional: Stop audio when target lost?
+          // Currently it keeps playing until next target found
+        }, DEBOUNCE_DELAY);
+      });
+    }
+  </script>
 </body>
 </html>
